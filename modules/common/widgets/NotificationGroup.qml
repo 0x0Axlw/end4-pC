@@ -18,6 +18,8 @@ MouseArea { // Notification group area
     property bool multipleNotifications: notificationCount > 1
     property bool expanded: false
     property bool popup: false
+    property bool closeSidebarOnLink: true
+    property bool compact: false
     property real padding: 10
     implicitHeight: background.implicitHeight
 
@@ -40,6 +42,10 @@ MouseArea { // Notification group area
     }
 
     hoverEnabled: true
+    HoverHandler {
+        id: compactHover
+        enabled: root.compact
+    }
     onContainsMouseChanged: {
         if (!root.popup) return;
         if (root.containsMouse) root.notifications.forEach(notif => {
@@ -141,7 +147,7 @@ MouseArea { // Notification group area
         }
         
         clip: true
-        implicitHeight: root.expanded ? 
+        implicitHeight: root.expanded || root.compact ?
             row.implicitHeight + padding * 2 :
             Math.min(80, row.implicitHeight + padding * 2)
 
@@ -161,6 +167,7 @@ MouseArea { // Notification group area
             NotificationAppIcon { // Icons
                 Layout.alignment: Qt.AlignTop
                 Layout.fillWidth: false
+                implicitSize: root.compact ? 32 : 38 * scale
                 image: root?.multipleNotifications ? "" : notificationGroup?.notifications[0]?.image ?? ""
                 appIcon: root.notificationGroup?.appIcon
                 summary: root.notificationGroup?.notifications[root.notificationCount - 1]?.summary
@@ -183,13 +190,13 @@ MouseArea { // Notification group area
                     // spacing: 0
                     Layout.fillWidth: true
                     property real fontSize: Appearance.font.pixelSize.smaller
-                    property bool showAppName: root.multipleNotifications
+                    property bool showAppName: root.compact || root.multipleNotifications
                     implicitHeight: Math.max(topTextRow.implicitHeight, expandButton.implicitHeight)
 
                     RowLayout {
                         id: topTextRow
                         anchors.left: parent.left
-                        anchors.right: expandButton.left
+                        anchors.right: dismissButton.visible ? dismissButton.left : expandButton.left
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 5
                         StyledText {
@@ -230,6 +237,25 @@ MouseArea { // Notification group area
                             text: Translation.tr("Tip: right-clicking a group\nalso expands it")
                         }
                     }
+
+                    RippleButton {
+                        id: dismissButton
+                        visible: root.compact && (compactHover.hovered || activeFocus)
+                        anchors.right: expandButton.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        implicitWidth: 28
+                        implicitHeight: 28
+                        buttonRadius: 14
+                        Accessible.name: Translation.tr("Dismiss group")
+                        onClicked: root.destroyWithAnimation()
+                        contentItem: MaterialSymbol {
+                            text: "close"
+                            iconSize: 16
+                            color: Appearance.colors.colSubtext
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
                 }
 
                 StyledListView { // Notification body (expanded)
@@ -239,23 +265,25 @@ MouseArea { // Notification group area
                     spacing: expanded ? 5 : 3
                     // clip: true
                     interactive: false
+                    popin: !root.compact
                     Behavior on spacing {
                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                     }
                     model: ScriptModel {
                         values: root.expanded ? root.notifications.slice().reverse() : 
-                            root.notifications.slice().reverse().slice(0, 2)
+                            root.notifications.slice().reverse().slice(0, root.compact ? 1 : 2)
                     }
                     delegate: NotificationItem {
                         required property int index
                         required property var modelData
                         notificationObject: modelData
+                        closeSidebarOnLink: root.closeSidebarOnLink
+                        compact: root.compact
                         expanded: root.expanded
                         onlyNotification: (root.notificationCount === 1)
                         opacity: (!root.expanded && index == 1 && root.notificationCount > 2) ? 0.5 : 1
                         visible: root.expanded || (index < 2)
-                        anchors.left: parent?.left
-                        anchors.right: parent?.right
+                        width: ListView.view.width
                     }
                 }
 

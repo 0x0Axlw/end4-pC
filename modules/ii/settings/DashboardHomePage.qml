@@ -1,3 +1,4 @@
+import Quickshell.Io
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -11,6 +12,19 @@ import qs.modules.common.functions
 
 Item {
     id: root
+
+    property bool avatarAvailable: false
+    onAvatarPathChanged: {
+        avatarAvailable = false;
+        avatarCheck.running = false;
+        avatarCheck.running = true;
+    }
+    Process {
+        id: avatarCheck
+        command: ["test", "-r", root.avatarPath]
+        running: true
+        onExited: (exitCode, exitStatus) => root.avatarAvailable = exitCode === 0 && exitStatus === 0
+    }
 
     required property Item pager
     property int staggerMs: 45
@@ -253,7 +267,7 @@ Item {
                         Image {
                             id: avatarImage
                             anchors.fill: parent
-                            source: `file://${root.avatarPath}`
+                            source: root.avatarAvailable ? `file://${root.avatarPath}` : ""
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             cache: false

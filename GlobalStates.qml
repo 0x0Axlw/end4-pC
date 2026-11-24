@@ -117,12 +117,7 @@ Singleton {
         root[name] = !root[name];
     }
     
-    onSidebarRightOpenChanged: {
-        if (GlobalStates.sidebarRightOpen) {
-            Notifications.timeoutAll();
-            Notifications.markAllRead();
-        }
-    }
+
 
     Timer {
         id: barRefreshTimer

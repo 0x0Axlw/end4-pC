@@ -102,7 +102,7 @@ Singleton {
         required property string translationsDir
         signal languagesScanned(var languages)
 
-        command: ["find", translationScanner.translationsDir, "-name", "*.json", "-exec", "basename", "{}", ".json", ";"]
+        command: ["find", translationScanner.translationsDir, "-name", "*.json", "-exec", "basename", "-a", "-s", ".json", "{}", "+"]
         running: true
 
         stdout: StdioCollector {

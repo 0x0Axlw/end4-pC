@@ -1,3 +1,4 @@
+import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -10,6 +11,22 @@ import qs.modules.common.widgets
 
 Item {
     id: root
+
+    property bool avatarAvailable: false
+    onAvatarPathChanged: {
+        avatarAvailable = false;
+        avatarCheck.running = false;
+        avatarCheck.running = true;
+    }
+    Process {
+        id: avatarCheck
+        command: ["test", "-r", root.avatarPath]
+        running: true
+        onExited: (exitCode, exitStatus) => root.avatarAvailable = exitCode === 0 && exitStatus === 0
+    }
+
+    readonly property string avatarPath: Config.options.profile.avatarPath !== "" && Config.options.profile.avatarPicture !== ""
+        ? Config.options.profile.avatarPicture : `${Directories.home}/.face`
 
     signal pageExitRequested()
 
@@ -27,6 +44,8 @@ Item {
     readonly property int settingsPage: 4
     readonly property int presetsPage: 2
     readonly property int mediaPage: 3
+    readonly property int kanbanPage: 5
+    readonly property int notificationsPage: 6
     readonly property bool mediaVisible: currentPage === mediaPage && mediaState.displayedArtFilePath !== ""
     readonly property var mediaColors: mediaVisible ? mediaState.blendedColors : Appearance.colors
 
@@ -100,7 +119,7 @@ Item {
     property bool editingText: false
 
     Keys.onPressed: event => {
-        if (editingText) {
+        if (editingText || (currentPage === kanbanPage && kanbanLoader.item?.typing)) {
             event.accepted = true;
             return;
         }
@@ -160,7 +179,8 @@ Item {
         { name: Translation.tr("Wallpapers"), icon: "wallpaper" },
         { name: Translation.tr("Presets"), icon: "hallway" },
         { name: Translation.tr("Media"), icon: "play_circle" },
-        { name: Translation.tr("Settings"), icon: "settings" }
+        { name: Translation.tr("Settings"), icon: "settings" },
+        { name: Translation.tr("Kanban"), icon: "view_kanban" }
     ]
 
     readonly property var layouts: [
@@ -193,6 +213,8 @@ Item {
     }
 
     function buildPage(page) {
+        if (page === notificationsPage) return [];
+        if (page === kanbanPage) return [];
         if (page === mediaPage || page === homePage || page === settingsPage || page === wallpapersPage || page === presetsPage) return [];
         const spans = layouts[page % layouts.length];
         const pool = page === wallpapersPage ? shuffled(Wallpapers.wallpapers) : [];
@@ -460,22 +482,27 @@ Item {
                     delegate: RippleButton {
                         required property string modelData
 
+                        objectName: "dashboardNotificationsButton"
                         implicitWidth: 44
                         implicitHeight: 44
                         buttonRadius: height / 2
                         glass: !ui.media
                         colBackground: ui.surface
                         colBackgroundHover: ui.hover
+                        toggled: root.pendingPage === root.notificationsPage
+                        colBackgroundToggled: ui.accent
+                        colBackgroundToggledHover: ui.accentHover
+                        Accessible.name: Translation.tr("Notifications")
                         onClicked: {
                             if (modelData === "notifications")
-                                GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
+                                root.goToPage(root.notificationsPage);
                         }
                         contentItem: Item {
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: modelData
                                 iconSize: Appearance.font.pixelSize.larger
-                                color: ui.fgSurface
+                                color: root.pendingPage === root.notificationsPage ? ui.fgAccent : ui.fgSurface
                             }
 
                             Rectangle {
@@ -512,9 +539,7 @@ Item {
                     Image {
                         id: avatarImage
                         anchors.fill: parent
-                        source: Config.options.profile.avatarPath !== ""
-                            ? "file://" + Config.options.profile.avatarPicture
-                            : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
+                        source: root.avatarAvailable ? `file://${root.avatarPath}` : ""
                         sourceSize.width: avatarImage.width * 2
                         sourceSize.height: avatarImage.height * 2
                         fillMode: Image.PreserveAspectCrop
@@ -569,7 +594,7 @@ Item {
             id: boxGrid
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.currentPage !== root.mediaPage && root.currentPage !== root.homePage && root.currentPage !== root.settingsPage && root.currentPage !== root.wallpapersPage && root.currentPage !== root.presetsPage
+            visible: root.currentPage !== root.notificationsPage && root.currentPage !== root.kanbanPage && root.currentPage !== root.mediaPage && root.currentPage !== root.homePage && root.currentPage !== root.settingsPage && root.currentPage !== root.wallpapersPage && root.currentPage !== root.presetsPage
             columns: 4
             rowSpacing: 12
             columnSpacing: 12
@@ -656,6 +681,31 @@ Item {
                         }
                     }
                 }
+            }
+        }
+
+        Loader {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: active
+            active: root.currentPage === root.notificationsPage
+
+            sourceComponent: DashboardNotificationsPage {
+                pager: root
+                staggerMs: root.staggerMs
+            }
+        }
+
+        Loader {
+            id: kanbanLoader
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: active
+            active: root.currentPage === root.kanbanPage
+
+            sourceComponent: DashboardKanbanPage {
+                pager: root
+                staggerMs: root.staggerMs
             }
         }
 

@@ -13,6 +13,8 @@ Item { // Notification item area
     property var notificationObject
     property bool expanded: false
     property bool onlyNotification: false
+    property bool closeSidebarOnLink: true
+    property bool compact: false
     property real fontSize: Appearance.font.pixelSize.small
     property real padding: onlyNotification ? 0 : 8
     property real summaryElideRatio: 0.85
@@ -145,18 +147,24 @@ Item { // Notification item area
                 animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
             }
 
-            RowLayout { // Summary row
+            GridLayout { // Summary and compact preview
                 id: summaryRow
-                visible: !root.onlyNotification || !root.expanded
+                visible: root.compact || !root.onlyNotification || !root.expanded
                 Layout.fillWidth: true
-                implicitHeight: summaryText.implicitHeight
+                Layout.minimumWidth: 0
+                Layout.maximumWidth: root.compact ? Math.max(0, root.width - root.padding * 2) : Infinity
+                columns: root.compact ? 1 : 2
+                rowSpacing: 2
+                columnSpacing: 5
                 StyledText {
                     id: summaryText
-                    Layout.fillWidth: summaryTextMetrics.width >= root.width * root.summaryElideRatio
-                    visible: !root.onlyNotification
+                    Layout.fillWidth: root.compact || summaryTextMetrics.width >= root.width * root.summaryElideRatio
+                    visible: root.compact || !root.onlyNotification
                     font.pixelSize: root.fontSize
                     color: Appearance.colors.colOnLayer3
                     elide: Text.ElideRight
+                    textFormat: root.compact ? Text.PlainText : Text.AutoText
+                    font.weight: root.compact ? Font.Medium : Font.Normal
                     text: root.notificationObject.summary || ""
                 }
                 StyledText {
@@ -170,7 +178,7 @@ Item { // Notification item area
                     color: Appearance.colors.colSubtext
                     elide: Text.ElideRight
                     wrapMode: Text.Wrap // Needed for proper eliding????
-                    maximumLineCount: 1
+                    maximumLineCount: root.compact ? 2 : 1
                     textFormat: Text.StyledText
                     text: {
                         return NotificationUtils.processNotificationBody(notificationObject.body, notificationObject.appName || notificationObject.summary).replace(/\n/g, "<br/>")
@@ -181,6 +189,8 @@ Item { // Notification item area
             ColumnLayout { // Expanded content
                 id: expandedContentColumn
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.maximumWidth: root.compact ? Math.max(0, root.width - root.padding * 2) : Infinity
                 opacity: root.expanded ? 1 : 0
                 visible: opacity > 0
 
@@ -202,7 +212,7 @@ Item { // Notification item area
 
                     onLinkActivated: (link) => {
                         Qt.openUrlExternally(link)
-                        GlobalStates.sidebarRightOpen = false
+                        if (root.closeSidebarOnLink) GlobalStates.sidebarRightOpen = false
                     }
                     
                     PointingHandLinkHover {}
@@ -210,10 +220,11 @@ Item { // Notification item area
 
                 Item {
                     Layout.fillWidth: true
+                    Layout.maximumWidth: root.compact ? Math.max(0, root.width - root.padding * 2) : Infinity
                     implicitWidth: actionsFlickable.implicitWidth
                     implicitHeight: actionsFlickable.implicitHeight
 
-                    layer.enabled: true
+                    layer.enabled: !root.compact || root.expanded
                     layer.effect: OpacityMask {
                         maskSource: Rectangle {
                             width: actionsFlickable.width
@@ -251,7 +262,7 @@ Item { // Notification item area
                                 Layout.fillWidth: true
                                 buttonText: Translation.tr("Close")
                                 urgency: notificationObject.urgency
-                                implicitWidth: (notificationObject.actions.length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
+                                implicitWidth: root.compact ? 32 : (notificationObject.actions.length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) :
                                     (contentItem.implicitWidth + leftPadding + rightPadding)
 
                                 onClicked: {
@@ -285,7 +296,7 @@ Item { // Notification item area
                             NotificationActionButton {
                                 Layout.fillWidth: true
                                 urgency: notificationObject.urgency
-                                implicitWidth: (notificationObject.actions.length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) : 
+                                implicitWidth: root.compact ? 32 : (notificationObject.actions.length == 0) ? ((actionsFlickable.width - actionRowLayout.spacing) / 2) :
                                     (contentItem.implicitWidth + leftPadding + rightPadding)
 
                                 onClicked: {

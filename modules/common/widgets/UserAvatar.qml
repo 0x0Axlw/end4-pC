@@ -1,5 +1,6 @@
 import qs.modules.common
 import qs.modules.common.functions
+import Quickshell.Io
 import QtQuick
 import Qt5Compat.GraphicalEffects
 
@@ -13,6 +14,20 @@ Rectangle {
         ? Config.options.profile.avatarPicture
         : `${FileUtils.trimFileProtocol(Directories.home)}/.face`
 
+    property bool pictureAvailable: false
+    onPicturePathChanged: {
+        pictureAvailable = false;
+        pictureCheck.running = false;
+        pictureCheck.running = true;
+    }
+
+    Process {
+        id: pictureCheck
+        command: ["test", "-r", root.picturePath]
+        running: true
+        onExited: (exitCode, exitStatus) => root.pictureAvailable = exitCode === 0 && exitStatus === 0
+    }
+
     implicitWidth: 48
     implicitHeight: 48
     radius: width / 2
@@ -22,7 +37,7 @@ Rectangle {
         id: avatarImage
         anchors.fill: parent
         anchors.margins: root.border.width
-        source: `file://${root.picturePath}`
+        source: root.pictureAvailable ? `file://${root.picturePath}` : ""
         sourceSize.width: width * 2
         sourceSize.height: height * 2
         fillMode: Image.PreserveAspectCrop

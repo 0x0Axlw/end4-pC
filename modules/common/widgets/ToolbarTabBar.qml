@@ -9,16 +9,20 @@ import QtQuick.Layouts
 Item {
     id: root
     property alias currentIndex: tabBar.currentIndex
+    signal activated(int index)
     required property var tabButtonList
 
     function incrementCurrentIndex() {
         tabBar.incrementCurrentIndex();
+        root.activated(tabBar.currentIndex);
     }
     function decrementCurrentIndex() {
         tabBar.decrementCurrentIndex();
+        root.activated(tabBar.currentIndex);
     }
     function setCurrentIndex(index) {
         tabBar.setCurrentIndex(index);
+        root.activated(tabBar.currentIndex);
     }
 
     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter

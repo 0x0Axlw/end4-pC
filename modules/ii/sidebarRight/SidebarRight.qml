@@ -29,11 +29,14 @@ Scope {
             function onSidebarRightOpenChanged() {
                 if (GlobalStates.sidebarRightOpen) {
                     closeAnimTimer.stop();
+                    contentUnloadTimer.stop();
                     panelWindow.reallyVisible = true;
                 } else if (panelWindow.animatedEntrance) {
                     closeAnimTimer.restart();
+                    contentUnloadTimer.restart();
                 } else {
                     panelWindow.reallyVisible = false;
+                    contentUnloadTimer.restart();
                 }
             }
         }
@@ -42,6 +45,11 @@ Scope {
             id: closeAnimTimer
             interval: 150
             onTriggered: panelWindow.reallyVisible = false
+        }
+
+        Timer {
+            id: contentUnloadTimer
+            interval: Appearance.animation.sidebarSlideExit.duration
         }
 
         function hide() {
@@ -161,7 +169,8 @@ Scope {
 
                 Loader {
                     id: sidebarContentLoader
-                    active: panelWindow.reallyVisible || Config?.options.sidebar.keepRightSidebarLoaded
+                    active: panelWindow.reallyVisible || contentUnloadTimer.running
+                        || Config?.options.sidebar.keepRightSidebarLoaded
                     anchors {
                         fill: parent
                         margins: Appearance.sizes.hyprlandGapsOut

@@ -887,7 +887,7 @@ Singleton {
                 property string bannerImage: ""
                 property real bannerFocusX: 0.5
                 property real bannerFocusY: 0.5
-                property bool keepRightSidebarLoaded: true
+                property bool keepRightSidebarLoaded: false
                 property string leftLastPage: "home"
                 property bool leftRememberPage: true
                 property JsonObject translator: JsonObject {

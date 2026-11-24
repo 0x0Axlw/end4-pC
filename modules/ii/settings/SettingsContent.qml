@@ -58,16 +58,9 @@ Item {
     
     property var pages: SettingsPages.pages
 
-    Component.onCompleted: {
-        Config.readWriteDelay = 0
-        Qt.callLater(() => {
-            for (let i = 0; i < root.pages.length; i++) {
-                let loader = pagesRepeater.itemAt(i)
-                if (loader) loader.active = true
-            }
-            if (profileLoader) profileLoader.active = true
-        })
-    }
+    Component.onCompleted: Config.readWriteDelay = 0
+
+    readonly property bool classicSettingsOpen: GlobalStates.settingsOpen && Config.options.settings.style !== "dashboard"
 
     ColumnLayout {
         anchors {
@@ -239,7 +232,10 @@ Item {
                             required property var index
                             source: modelData.component
 
-                            active: Config.ready && (root.currentPage === index || item !== null)
+                            // Keep visited pages so scroll positions and unfinished edits survive navigation.
+                            // The Hyprland page applies compositor overrides at startup.
+                            active: Config.ready && (modelData.id === "hyprland" || item !== null
+                                || (root.classicSettingsOpen && isActive))
 
                             anchors.fill: parent
 
@@ -274,7 +270,8 @@ Item {
 
                     Loader {
                         id: profileLoader
-                        active: false
+                        active: item !== null || (root.classicSettingsOpen && isActive)
+                        onLoaded: if (isActive) GlobalStates.currentPageInstance = item
                         anchors.fill: parent
                         source: Qt.resolvedUrl("pages/Profile.qml")
 
